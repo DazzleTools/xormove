@@ -23,7 +23,7 @@ jobs:
             triplet: x64-linux
             name: Linux (GCC)
           - os: macos-latest
-            triplet: x64-osx
+            triplet: arm64-osx
             name: macOS (Clang)
 
     runs-on: ${{ matrix.os }}
