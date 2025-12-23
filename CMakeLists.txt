@@ -31,25 +31,25 @@ find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
 find_package(cryptopp CONFIG REQUIRED)
 find_package(argparse CONFIG REQUIRED)
 
-# Main executable
-add_executable(xormove
+# Main executable (named xmv for short, project is xormove)
+add_executable(xmv
     src/xormove.cpp
 )
 
 # Link libraries
-target_link_libraries(xormove PRIVATE
+target_link_libraries(xmv PRIVATE
     Boost::filesystem
     cryptopp::cryptopp
     argparse::argparse
 )
 
 # Include version header
-target_include_directories(xormove PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(xmv PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 # Platform-specific settings
 if(WIN32)
     # Windows-specific flags
-    target_compile_definitions(xormove PRIVATE
+    target_compile_definitions(xmv PRIVATE
         _CRT_SECURE_NO_WARNINGS
         WIN32_LEAN_AND_MEAN
         NOMINMAX
@@ -58,10 +58,10 @@ endif()
 
 if(MSVC)
     # MSVC-specific warning level
-    target_compile_options(xormove PRIVATE /W4)
+    target_compile_options(xmv PRIVATE /W4)
 else()
     # GCC/Clang warning flags
-    target_compile_options(xormove PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(xmv PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 # =============================================================================
@@ -86,7 +86,7 @@ add_test(NAME XorSwapTests COMMAND test_xor_swap)
 # =============================================================================
 # Install
 # =============================================================================
-install(TARGETS xormove
+install(TARGETS xmv
     RUNTIME DESTINATION bin
 )
 

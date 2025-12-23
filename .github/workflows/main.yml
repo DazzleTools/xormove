@@ -65,10 +65,10 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: xormove-${{ matrix.triplet }}
+        name: xmv-${{ matrix.triplet }}
         path: |
-          build/${{ env.BUILD_TYPE }}/xormove*
-          build/xormove*
+          build/${{ env.BUILD_TYPE }}/xmv*
+          build/xmv*
         if-no-files-found: warn
 
   release:

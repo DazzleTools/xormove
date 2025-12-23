@@ -5,6 +5,19 @@ All notable changes to xormove will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-12-23
+
+### Changed
+- **Binary renamed from `xormove` to `xmv`** for easier command-line use
+- `--version` now shows actual version instead of argparse default
+
+### Added
+- `--dry-run` flag to preview operations without making changes
+- `ROADMAP.md` with development milestones and project board link
+
+### Fixed
+- Suppressed unused parameter warning for `fast` mode (planned for v0.5.0)
+
 ## [0.1.4] - 2025-12-23
 
 ### Fixed
@@ -58,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secure mode with larger chunk size (`--secure` flag)
 - CMake build system with vcpkg dependency management
 
+[0.2.0]: https://github.com/DazzleTools/xormove/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/DazzleTools/xormove/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/DazzleTools/xormove/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/DazzleTools/xormove/compare/v0.1.1...v0.1.2

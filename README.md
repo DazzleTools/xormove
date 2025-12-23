@@ -14,6 +14,8 @@
 
 **Swap files between near-full disks without requiring temporary space.**
 
+> **Binary name**: `xmv` (short for "xor-move")
+
 ## The Problem
 
 You have two disks, both nearly full. You want to move one file to the other disk, but need to keep all the files and can't delete anything. So you want to somehow swap a file from Disk2 to Disk1 and vice versa, but there is not enough space.
@@ -77,19 +79,22 @@ For detailed instructions on building with Visual Studio, VS Code, CLion, or com
 
 ```bash
 # Basic file swap
-xormove /path/to/fileA /path/to/fileB
+xmv /path/to/fileA /path/to/fileB
 
 # With integrity verification
-xormove fileA fileB --verify
+xmv fileA fileB --verify
 
 # With progress display
-xormove fileA fileB --progress
+xmv fileA fileB --progress
+
+# Preview without making changes
+xmv fileA fileB --dry-run
 
 # Verbose output with logging
-xormove fileA fileB --verbose --log swap.log
+xmv fileA fileB --verbose --log swap.log
 
 # Secure mode (larger chunks, more thorough)
-xormove fileA fileB --secure --verify
+xmv fileA fileB --secure --verify
 ```
 
 ### Options
@@ -99,6 +104,7 @@ xormove fileA fileB --secure --verify
 | `--secure` | Use larger chunk size (1MB vs 4KB) |
 | `--fast` | Minimal checking for speed |
 | `--verify` | SHA-256 verification after swap |
+| `--dry-run` | Preview operation without making changes |
 | `--verbose`, `-vb` | Detailed output |
 | `--log FILE` | Write to log file |
 | `--progress` | Display progress bar |

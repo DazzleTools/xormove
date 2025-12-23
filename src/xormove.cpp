@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "version.h"
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/hex.hpp>
 
@@ -78,6 +79,9 @@ std::string calculateSHA256(const std::string& filename) {
 
 // Function to perform XOR swap of two files
 void xorSwap(const std::string& fileA, const std::string& fileB, bool secure, bool fast, bool verify, bool verbose, const std::string& logFile, bool progress) {
+    // fast mode optimization planned for v0.5.0 (issue #3)
+    (void)fast;
+
     // Check if both files exist
     if (!fs::exists(fileA) || !fs::exists(fileB)) {
         std::cerr << "Error: One or both files do not exist." << std::endl;
@@ -192,7 +196,7 @@ void xorSwap(const std::string& fileA, const std::string& fileB, bool secure, bo
 }
 
 int main(int argc, char* argv[]) {
-    argparse::ArgumentParser program("xormove");
+    argparse::ArgumentParser program("xmv", XORMOVE_VERSION_STRING);
 
     program.add_argument("fileA")
         .help("Path to the first file");
@@ -229,6 +233,11 @@ int main(int argc, char* argv[]) {
         .default_value(false)
         .implicit_value(true);
 
+    program.add_argument("--dry-run")
+        .help("Show what would happen without making changes")
+        .default_value(false)
+        .implicit_value(true);
+
     try {
         program.parse_args(argc, argv);
     }
@@ -246,6 +255,42 @@ int main(int argc, char* argv[]) {
     bool verbose = program.get<bool>("--verbose");
     std::string logFile = program.get<std::string>("--log");
     bool progress = program.get<bool>("--progress");
+    bool dryRun = program.get<bool>("--dry-run");
+
+    // Dry run mode - show what would happen without making changes
+    if (dryRun) {
+        std::cout << "Dry run - no changes will be made\n" << std::endl;
+
+        fs::path pathA(fileA);
+        fs::path pathB(fileB);
+
+        // Check if files exist
+        bool existsA = fs::exists(pathA);
+        bool existsB = fs::exists(pathB);
+
+        if (!existsA || !existsB) {
+            std::cerr << "Error: One or both files do not exist." << std::endl;
+            if (!existsA) std::cerr << "  Missing: " << fileA << std::endl;
+            if (!existsB) std::cerr << "  Missing: " << fileB << std::endl;
+            return 1;
+        }
+
+        auto sizeA = fs::file_size(pathA);
+        auto sizeB = fs::file_size(pathB);
+
+        std::cout << "Would swap:" << std::endl;
+        std::cout << "  File A: " << fs::absolute(pathA).string() << " (" << sizeA << " bytes)" << std::endl;
+        std::cout << "  File B: " << fs::absolute(pathB).string() << " (" << sizeB << " bytes)" << std::endl;
+        std::cout << std::endl;
+
+        std::cout << "Strategy: XOR swap (both files modified in place)" << std::endl;
+        std::cout << "Chunk size: " << (secure ? "1 MB (secure)" : "4 KB (fast)") << std::endl;
+        std::cout << "Verification: " << (verify ? "Enabled" : "Disabled") << std::endl;
+        std::cout << std::endl;
+        std::cout << "No changes made." << std::endl;
+
+        return 0;
+    }
 
     xorSwap(fileA, fileB, secure, fast, verify, verbose, logFile, progress);
 
