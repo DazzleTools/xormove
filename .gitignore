@@ -135,19 +135,125 @@ credentials.json
 /convos/
 
 #######################
+# C/C++ Build Output  #
+#######################
+
+# Build directories
+build/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.ninja
+.ninja_*
+
+# Compiled Object files
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+#######################
+# Visual Studio       #
+#######################
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# VS directories
+.vs/
+x64/
+x86/
+Debug/
+Release/
+[Rr]eleases/
+[Dd]ebug/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# VS test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+
+# ReSharper
+_ReSharper*/
+
+#######################
+# vcpkg               #
+#######################
+
+vcpkg_installed/
+
+#######################
+# External Libraries  #
+#######################
+
+# Downloaded/extracted dependency libraries (use vcpkg instead)
+libs/
+external/
+third_party/
+vendor/
+
+# Downloaded archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.7z
+
+#######################
 # Project Specific    #
 #######################
 
-# Add custom patterns below
+# VS user-specific project settings (not the project files themselves)
+*.vcxproj.user
+
+# Test run artifacts (working copies get modified during tests)
+# Clean reference copies are in tests/data/
+# Ignore everything in test-runs except the sample files
+test-runs/*
+!test-runs/fileA.txt
+!test-runs/fileB.txt
 
 # RepoKit Private Content Protection (DO NOT REMOVE)
 **/private_*
 CLAUDE.md
+.repokit.json
 .env.private
-private/docs/
-test-runs/
+private/
 revisions/
-private/notes/
-private/claude/
-private/temp/
 test_runs/

@@ -1,0 +1,98 @@
+#!/bin/bash
+#
+# Pre-push hook from Git-RepoKit versioning system
+# Runs basic quality checks before pushing to remote
+#
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Change to repository root
+cd "$(git rev-parse --show-toplevel)" 2>/dev/null || true
+
+# Get current branch
+CURRENT_BRANCH=$(git branch --show-current)
+echo -e "${BLUE}🔍 Pre-push validation for branch: $CURRENT_BRANCH${NC}"
+echo ""
+
+# =============================================================================
+# BUILD CHECK (if build directory exists)
+# =============================================================================
+echo -e "${BLUE}Checking for build...${NC}"
+if [ -d "build" ] && [ -f "build/Makefile" -o -f "build/build.ninja" ]; then
+    echo -e "${BLUE}Running build check...${NC}"
+    if cmake --build build --config Release 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} Build check passed"
+    else
+        echo -e "${YELLOW}⚠${NC} Build check failed"
+        if [[ "$CURRENT_BRANCH" == "main" ]] || [[ "$CURRENT_BRANCH" == "master" ]]; then
+            echo -e "${RED}❌ BLOCKED: Cannot push to main with build failures${NC}"
+            exit 1
+        else
+            echo "  Consider fixing build before pushing"
+        fi
+    fi
+else
+    echo -e "${YELLOW}⚠${NC} No build directory found"
+    echo "  Skipping build validation (run cmake to configure)"
+fi
+
+# =============================================================================
+# RUN TESTS (if test executable exists)
+# =============================================================================
+echo ""
+echo -e "${BLUE}Checking for tests...${NC}"
+
+# Look for test executable
+TEST_EXE=""
+if [ -f "build/Release/test_xor_swap.exe" ]; then
+    TEST_EXE="build/Release/test_xor_swap.exe"
+elif [ -f "build/test_xor_swap" ]; then
+    TEST_EXE="build/test_xor_swap"
+elif [ -f "build/Debug/test_xor_swap.exe" ]; then
+    TEST_EXE="build/Debug/test_xor_swap.exe"
+fi
+
+if [ -n "$TEST_EXE" ] && [ -f "$TEST_EXE" ]; then
+    echo -e "${BLUE}Running tests...${NC}"
+    if "$TEST_EXE"; then
+        echo -e "${GREEN}✓${NC} All tests passed"
+    else
+        echo -e "${YELLOW}⚠${NC} Some tests failed"
+        if [[ "$CURRENT_BRANCH" == "main" ]] || [[ "$CURRENT_BRANCH" == "master" ]]; then
+            echo -e "${RED}❌ BLOCKED: Cannot push to main with failing tests${NC}"
+            exit 1
+        else
+            echo "  Consider fixing tests before pushing"
+        fi
+    fi
+else
+    echo -e "${YELLOW}⚠${NC} No test executable found"
+    echo "  Skipping test validation"
+fi
+
+# =============================================================================
+# CHECK FOR DEBUG STATEMENTS
+# =============================================================================
+echo ""
+echo -e "${BLUE}Checking for debug statements...${NC}"
+
+# Check for common debug patterns in C++ code
+if grep -r "std::cout.*DEBUG\|#define DEBUG\|printf.*debug" src/ include/ --include="*.cpp" --include="*.h" --include="*.hpp" 2>/dev/null; then
+    echo -e "${YELLOW}⚠${NC} Warning: Debug statements found"
+    echo "  Consider removing debug code before pushing to production"
+fi
+
+echo -e "${GREEN}✓${NC} Debug check complete"
+
+# =============================================================================
+# FINAL STATUS
+# =============================================================================
+echo ""
+echo -e "${GREEN}✅ Pre-push validation complete${NC}"
+echo "Ready to push to $CURRENT_BRANCH"
+exit 0

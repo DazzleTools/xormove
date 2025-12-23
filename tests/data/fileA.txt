@@ -1,0 +1,5 @@
+This is test file A.
+It contains some sample content for testing the XOR swap functionality.
+After swapping, this content should appear in fileB.txt.
+Line 4 of file A.
+Line 5 of file A.
