@@ -1,33 +1,67 @@
 # Contributing to xormove
 
-Thank you for considering contributing to xormove!
+## Development Setup
 
-## Code of Conduct
+### Prerequisites
 
-Please note that this project is released with a Contributor Code of Conduct.
-By participating in this project you agree to abide by its terms.
+- Visual Studio 2022 with C++17 support
+- Pre-built Boost 1.85.0 libraries (filesystem, timer, algorithm)
+- Pre-built Crypto++ 8.9.0 libraries
+- argparse 3.0 header-only library
 
-## How Can I Contribute?
+### Library Setup
 
-### Reporting Bugs
+The project expects pre-built libraries in a sibling directory structure:
 
-This section guides you through submitting a bug report.
+```
+C:\code\
+├── xormove\
+│   └── local\          # This repository
+│       ├── src\
+│       ├── include\
+│       └── xormove.sln
+└── xormove_orig\
+    └── libs\           # Pre-built dependencies
+        ├── boost_1_85_0\
+        │   └── stage\lib\  # Compiled Boost libs
+        ├── cryptopp890\
+        │   └── cryptopp\x64\  # Compiled Crypto++ libs
+        └── argparse-3.0\
+            └── include\    # Header-only
+```
 
-### Suggesting Enhancements
+### Building
 
-This section guides you through submitting an enhancement suggestion.
+1. Open `xormove.sln` in Visual Studio 2022
+2. Select configuration (Debug|x64 recommended for development)
+3. Build Solution (Ctrl+Shift+B)
 
-### Pull Requests
+### Testing
 
-The process described here has several goals:
+Create test files in `test-runs/` directory:
 
-1. Maintain the project's quality
-2. Fix problems that are important to users
-3. Enable a sustainable system for maintainers to review contributions
+```bash
+echo "Test content for file A" > test-runs/fileA.txt
+echo "Test content for file B" > test-runs/fileB.txt
+```
 
-Please follow these steps to have your contribution considered by the maintainers:
+Run the executable:
+
+```bash
+bin\Debug\xormove.exe test-runs\fileA.txt test-runs\fileB.txt --verbose --progress
+```
+
+## Code Style
+
+- C++17 standard
+- Use `boost::filesystem` for file operations
+- Prefer descriptive variable names
+- Add comments for non-obvious logic
+
+## Pull Request Process
 
 1. Fork the repository
-2. Create a new branch
+2. Create a feature branch
 3. Make your changes
-4. Submit a pull request
+4. Test thoroughly
+5. Submit a pull request with clear description
