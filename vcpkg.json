@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "xormove",
+  "version": "1.0.0",
+  "description": "Swap files between disks using XOR operations - works even when disks are near full",
+  "homepage": "https://github.com/DazzleTools/xormove",
+  "license": "MIT",
+  "supports": "windows | linux | osx",
+  "dependencies": [
+    {
+      "name": "boost-filesystem",
+      "version>=": "1.83.0"
+    },
+    {
+      "name": "boost-algorithm",
+      "version>=": "1.83.0"
+    },
+    "cryptopp",
+    "argparse"
+  ]
+}
