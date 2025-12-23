@@ -120,20 +120,41 @@ void xorSwap(const std::string& fileA, const std::string& fileB, bool secure, bo
     // Perform XOR swap
     std::vector<char> bufferA(chunkSize);
     std::vector<char> bufferB(chunkSize);
-    while (inA.read(bufferA.data(), chunkSize) && inB.read(bufferB.data(), chunkSize)) {
-        std::streamsize count = inA.gcount();
 
-        for (std::streamsize i = 0; i < count; ++i) {
+    // Read both files chunk by chunk until both are exhausted
+    while (true) {
+        inA.read(bufferA.data(), chunkSize);
+        std::streamsize countA = inA.gcount();
+
+        inB.read(bufferB.data(), chunkSize);
+        std::streamsize countB = inB.gcount();
+
+        // Stop when both files are exhausted
+        if (countA == 0 && countB == 0)
+            break;
+
+        // Process up to the larger count for XOR (zero-pad shorter in memory only)
+        std::streamsize maxCount = std::max(countA, countB);
+
+        // Zero-pad in memory if one file is shorter (for XOR operation only)
+        if (countA < maxCount)
+            std::fill(bufferA.begin() + countA, bufferA.begin() + maxCount, 0);
+        if (countB < maxCount)
+            std::fill(bufferB.begin() + countB, bufferB.begin() + maxCount, 0);
+
+        // XOR swap the buffers
+        for (std::streamsize i = 0; i < maxCount; ++i) {
             char temp = bufferA[i] ^ bufferB[i];
             bufferA[i] ^= temp;
             bufferB[i] ^= temp;
         }
 
-        outA.write(bufferA.data(), count);
-        outB.write(bufferB.data(), count);
+        // Write swapped content with original sizes (bufferA now has B's content, bufferB has A's)
+        outA.write(bufferA.data(), countB);
+        outB.write(bufferB.data(), countA);
 
-        if (progress)
-            ++progressBar;
+        if (progress && progressBar)
+            ++(*progressBar);
     }
 
     // Close files
@@ -156,8 +177,10 @@ void xorSwap(const std::string& fileA, const std::string& fileB, bool secure, bo
     }
 
     // Replace original files with swapped files
-    fs::rename(fileA + ".temp", fileB);
-    fs::rename(fileB + ".temp", fileA);
+    // After XOR swap: fileA.temp has B's content, fileB.temp has A's content
+    // So we rename each temp back to its original filename to complete the swap
+    fs::rename(fileA + ".temp", fileA);
+    fs::rename(fileB + ".temp", fileB);
 
     // Log success message if verbose mode is enabled
     if (verbose) {

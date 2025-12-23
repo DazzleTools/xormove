@@ -3,6 +3,11 @@
 
 cmake_minimum_required(VERSION 3.20)
 
+# CMake 3.30+ removed FindBoost module, use config-mode instead
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 project(xormove
     VERSION 0.1.0
     DESCRIPTION "Swap files between disks using XOR operations - no extra space needed"
@@ -21,8 +26,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Find dependencies via vcpkg
-find_package(Boost REQUIRED COMPONENTS filesystem)
+# Find dependencies via vcpkg (CONFIG mode for vcpkg packages)
+find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
 find_package(cryptopp CONFIG REQUIRED)
 find_package(argparse CONFIG REQUIRED)
 
