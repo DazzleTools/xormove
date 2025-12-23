@@ -46,16 +46,19 @@ jobs:
         vcpkgGitCommitId: 'b2cb0da531c2f1f740045bfe7c4dac59f0b2b69c'
 
     - name: Configure CMake
+      shell: bash
       run: |
         cmake -B build -S . \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
 
     - name: Build
+      shell: bash
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
 
     - name: Test
+      shell: bash
       working-directory: build
       run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
 

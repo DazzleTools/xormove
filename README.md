@@ -3,19 +3,20 @@
 [![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
 [![CMake 3.20+](https://img.shields.io/badge/CMake-3.20+-blue.svg)](https://cmake.org/)
 [![vcpkg](https://img.shields.io/badge/vcpkg-package%20manager-blue.svg)](https://vcpkg.io/)
-[![Windows](https://img.shields.io/badge/Windows-supported-blue.svg)](https://www.microsoft.com/windows)
-[![Linux](https://img.shields.io/badge/Linux-supported-blue.svg)](https://www.linux.org/)
-[![macOS](https://img.shields.io/badge/macOS-supported-blue.svg)](https://www.apple.com/macos/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/v/release/DazzleTools/xormove?include_prereleases)](https://github.com/DazzleTools/xormove/releases)
 [![CI](https://github.com/DazzleTools/xormove/actions/workflows/main.yml/badge.svg)](https://github.com/DazzleTools/xormove/actions)
 [![GitHub Discussions](https://img.shields.io/github/discussions/DazzleTools/xormove)](https://github.com/DazzleTools/xormove/discussions)
 
+[![Windows](https://img.shields.io/badge/Windows-supported-brightgreen.svg)](https://www.microsoft.com/windows)
+[![Linux](https://img.shields.io/badge/Linux-supported-brightgreen.svg)](https://www.linux.org/)
+[![macOS](https://img.shields.io/badge/macOS-supported-brightgreen.svg)](https://www.apple.com/macos/)
+
 **Swap files between near-full disks without requiring temporary space.**
 
 ## The Problem
 
-You have two disks, both nearly full. You need to swap files between them:
+You have two disks, both nearly full. You want to move one file to the other disk, but need to keep all the files and can't delete anything. So you want to somehow swap a file from Disk2 to Disk1 and vice versa, but there is not enough space.
 
 ```
 Disk1: FileA (10GB)     Disk2: FileB (8GB)
