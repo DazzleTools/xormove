@@ -151,12 +151,12 @@ Like the project?
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/djdarcy)
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## Acknowledgements
 
-Created by Dustin ([@djdarcy](https://github.com/djdarcy))
-
 Part of the [DazzleTools](https://github.com/DazzleTools) collection.
+
+## License
+
+xormove, Copyright (C) 2025 Dustin Darcy ([@djdarcy](https://github.com/djdarcy))
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
