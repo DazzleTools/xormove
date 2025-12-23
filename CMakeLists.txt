@@ -26,9 +26,6 @@ find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(cryptopp CONFIG REQUIRED)
 find_package(argparse CONFIG REQUIRED)
 
-# Note: boost-timer's progress_display is deprecated
-# We may need to find an alternative or use a simple console progress bar
-
 # Main executable
 add_executable(xormove
     src/xormove.cpp

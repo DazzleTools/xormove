@@ -239,4 +239,12 @@ vendor/
 # Project Specific    #
 #######################
 
-# Add custom patterns below
+# VS user-specific project settings (not the project files themselves)
+*.vcxproj.user
+
+# Test run artifacts (working copies get modified during tests)
+# Clean reference copies are in tests/data/
+# Ignore everything in test-runs except the sample files
+test-runs/*
+!test-runs/fileA.txt
+!test-runs/fileB.txt

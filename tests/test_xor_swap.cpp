@@ -62,8 +62,8 @@ bool testXorSwapAlgorithm() {
 bool testXorSwapBinary() {
     std::cout << "Test 2: XOR swap with binary data... ";
 
-    std::vector<char> a = {0x00, 0xFF, 0x55, 0xAA, 0x01};
-    std::vector<char> b = {0xFF, 0x00, 0xAA, 0x55, 0xFE};
+    std::vector<char> a = {0x00, static_cast<char>(0xFF), 0x55, static_cast<char>(0xAA), 0x01};
+    std::vector<char> b = {static_cast<char>(0xFF), 0x00, static_cast<char>(0xAA), 0x55, static_cast<char>(0xFE)};
 
     std::vector<char> origA = a;
     std::vector<char> origB = b;

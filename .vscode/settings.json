@@ -1,11 +1,25 @@
 {
-  "files.watcherExclude": {
-    "**/.git/objects/**": true,
-    "**/.git/subtree-cache/**": true,
-    "**/.hg/store/**": true,
-    "**/.dart_tool": true,
-    "**/.git/**": true,
-    "**/node_modules/**": true,
-    "**/.vscode/**": true
-  }
+    "files.associations": {
+        "*.h": "cpp",
+        "*.hpp": "cpp"
+    },
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/../xormove_orig/libs/boost_1_85_0",
+        "${workspaceFolder}/../xormove_orig/libs/argparse-3.0/include",
+        "${workspaceFolder}/../xormove_orig/libs/cryptopp890"
+    ],
+    "editor.formatOnSave": false,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/.hg/store/**": true,
+        "**/.dart_tool": true,
+        "**/.git/**": true,
+        "**/node_modules/**": true,
+        "**/.vscode/**": true
+    }
 }

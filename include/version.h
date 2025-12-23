@@ -20,7 +20,7 @@
 // Semantic version components
 #define XORMOVE_VERSION_MAJOR 0
 #define XORMOVE_VERSION_MINOR 1
-#define XORMOVE_VERSION_PATCH 0
+#define XORMOVE_VERSION_PATCH 1
 
 // Optional release phase (alpha, beta, rc1, rc2, etc.)
 // Leave empty for stable releases
@@ -29,11 +29,11 @@
 // Full version string - updated by git pre-commit hook
 // DO NOT EDIT THIS LINE MANUALLY
 // Note: Hash reflects the commit this version builds upon (HEAD at commit time)
-#define XORMOVE_VERSION_FULL "0.1.0_private_4-20251223-130d75d"
+#define XORMOVE_VERSION_FULL "0.1.1_private_5-20251223-d046910"
 
 // Helper macros
-#define XORMOVE_VERSION_STRING "0.1.0"
-#define XORMOVE_VERSION_WITH_PHASE "0.1.0"
+#define XORMOVE_VERSION_STRING "0.1.1"
+#define XORMOVE_VERSION_WITH_PHASE "0.1.1"
 
 // Stringification helpers
 #define XORMOVE_STRINGIFY(x) #x

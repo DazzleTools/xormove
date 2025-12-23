@@ -13,11 +13,44 @@
 #include <string>
 #include <vector>
 
-// #define BOOST_TIMER_ENABLE_DEPRECATED
-
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/hex.hpp>
-#include <boost/timer/progress_display.hpp>
+
+// Simple progress bar replacement for deprecated boost::timer::progress_display
+class ProgressBar {
+public:
+    explicit ProgressBar(unsigned long total, std::ostream& os = std::cout)
+        : total_(total), current_(0), os_(os), width_(50) {
+        display();
+    }
+
+    ProgressBar& operator++() {
+        ++current_;
+        display();
+        return *this;
+    }
+
+private:
+    void display() {
+        if (total_ == 0) return;
+        unsigned long percent = (current_ * 100) / total_;
+        unsigned long filled = (current_ * width_) / total_;
+
+        os_ << "\r[";
+        for (unsigned long i = 0; i < width_; ++i) {
+            os_ << (i < filled ? '=' : (i == filled ? '>' : ' '));
+        }
+        os_ << "] " << percent << "% (" << current_ << "/" << total_ << ")";
+        os_.flush();
+
+        if (current_ >= total_) os_ << std::endl;
+    }
+
+    unsigned long total_;
+    unsigned long current_;
+    std::ostream& os_;
+    unsigned long width_;
+};
 
 #include <argparse/argparse.hpp>
 //#include <cryptopp/sha.h>
@@ -80,10 +113,9 @@ void xorSwap(const std::string& fileA, const std::string& fileB, bool secure, bo
     std::ofstream outB(fileB + ".temp", std::ios::binary);
 
     // Initialize progress bar if enabled
-	boost::timer::progress_display* progressBar = nullptr;
-	if (progress)
-        progressBar = new boost::timer::progress_display(static_cast<unsigned long>(fs::file_size(pathA) / chunkSize));
-        //boost::progress_display progressBar(fs::file_size(pathA) / chunkSize);
+    ProgressBar* progressBar = nullptr;
+    if (progress)
+        progressBar = new ProgressBar(static_cast<unsigned long>(fs::file_size(pathA) / chunkSize));
 
     // Perform XOR swap
     std::vector<char> bufferA(chunkSize);
