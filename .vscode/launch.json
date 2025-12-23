@@ -5,7 +5,7 @@
             "name": "Debug xormove",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/Debug/xormove.exe",
+            "program": "${workspaceFolder}/build/Debug/xormove.exe",
             "args": [
                 "${workspaceFolder}/test-runs/fileA.txt",
                 "${workspaceFolder}/test-runs/fileB.txt",
@@ -22,7 +22,7 @@
             "name": "Debug xormove with verify",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/Debug/xormove.exe",
+            "program": "${workspaceFolder}/build/Debug/xormove.exe",
             "args": [
                 "${workspaceFolder}/test-runs/fileA.txt",
                 "${workspaceFolder}/test-runs/fileB.txt",

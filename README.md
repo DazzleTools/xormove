@@ -1,7 +1,15 @@
 # xormove
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20BSD-lightgrey)]()
+[![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+[![CMake 3.20+](https://img.shields.io/badge/CMake-3.20+-blue.svg)](https://cmake.org/)
+[![vcpkg](https://img.shields.io/badge/vcpkg-package%20manager-blue.svg)](https://vcpkg.io/)
+[![Windows](https://img.shields.io/badge/Windows-supported-blue.svg)](https://www.microsoft.com/windows)
+[![Linux](https://img.shields.io/badge/Linux-supported-blue.svg)](https://www.linux.org/)
+[![macOS](https://img.shields.io/badge/macOS-supported-blue.svg)](https://www.apple.com/macos/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/DazzleTools/xormove?include_prereleases)](https://github.com/DazzleTools/xormove/releases)
+[![CI](https://github.com/DazzleTools/xormove/actions/workflows/main.yml/badge.svg)](https://github.com/DazzleTools/xormove/actions)
+[![GitHub Discussions](https://img.shields.io/github/discussions/DazzleTools/xormove)](https://github.com/DazzleTools/xormove/discussions)
 
 **Swap files between near-full disks without requiring temporary space.**
 
@@ -40,10 +48,10 @@ By streaming chunks and XORing them together, xormove swaps the contents **witho
 ### Prerequisites
 
 - CMake 3.20+
-- vcpkg (bundled with Visual Studio 2022, or install separately)
+- vcpkg (bundled with [Visual Studio 2022](https://visualstudio.microsoft.com/vs/community/), or [install separately](https://vcpkg.io/en/getting-started))
 - C++17 compiler (MSVC, GCC, Clang)
 
-### Build from Source
+### Quick Start
 
 **Windows (Visual Studio):**
 ```cmd
@@ -61,6 +69,8 @@ chmod +x scripts/build-unix.sh
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 cmake --build build --config Release
 ```
+
+For detailed instructions on building with Visual Studio, VS Code, CLion, or command-line tools, see the [Building Guide](docs/BUILDING.md).
 
 ## Usage
 
