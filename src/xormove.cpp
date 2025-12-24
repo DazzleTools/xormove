@@ -12,10 +12,14 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cctype>
+#include <set>
 
 #include "version.h"
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/hex.hpp>
+#include <boost/algorithm/string.hpp>
 
 // Simple progress bar replacement for deprecated boost::timer::progress_display
 class ProgressBar {
@@ -61,6 +65,215 @@ namespace fs = boost::filesystem;
 
 const std::streamsize CHUNK_SIZE_SECURE = 1024 * 1024;
 const std::streamsize CHUNK_SIZE_FAST = 4096;
+
+// Path destination strategy types
+enum class PathStrategy {
+    SAME,       // Keep original path (default, swap in place)
+    REL,        // Preserve relative path on target drive
+    SAME_AS_1,  // Use file 1's path structure
+    SAME_AS_2,  // Use file 2's path structure
+    EXPLICIT    // User-specified path
+};
+
+// Struct to hold parsed destination info
+struct DestinationSpec {
+    PathStrategy strategy;
+    std::string explicitPath;  // Only used if strategy == EXPLICIT
+};
+
+// Set of actions that --yes can auto-confirm
+struct YesActions {
+    bool mkdir = false;
+    bool overwrite = false;
+    bool all = false;
+
+    bool shouldAutoMkdir() const { return mkdir || all; }
+    bool shouldAutoOverwrite() const { return overwrite || all; }
+};
+
+// Convert string to uppercase for case-insensitive comparison
+std::string toUpperCase(const std::string& str) {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
+    return result;
+}
+
+// Parse --yes arguments into YesActions
+YesActions parseYesActions(const std::vector<std::string>& args) {
+    YesActions actions;
+
+    if (args.empty()) {
+        // Bare --yes means safe actions only (mkdir)
+        actions.mkdir = true;
+        return actions;
+    }
+
+    for (const auto& arg : args) {
+        std::string upper = toUpperCase(arg);
+        if (upper == "MKDIR") {
+            actions.mkdir = true;
+        } else if (upper == "OVERWRITE" || upper == "FORCE") {
+            actions.overwrite = true;
+        } else if (upper == "ALL") {
+            actions.all = true;
+        }
+    }
+
+    return actions;
+}
+
+// Parse destination specifier (--1-to or --2-to value)
+DestinationSpec parseDestination(const std::string& spec, int fileNum) {
+    DestinationSpec dest;
+    std::string upper = toUpperCase(spec);
+
+    if (upper == "SAME") {
+        dest.strategy = PathStrategy::SAME;
+    } else if (upper == "REL") {
+        dest.strategy = PathStrategy::REL;
+    } else if (upper == "SAME-AS-1") {
+        dest.strategy = PathStrategy::SAME_AS_1;
+    } else if (upper == "SAME-AS-2") {
+        dest.strategy = PathStrategy::SAME_AS_2;
+    } else {
+        // Treat as explicit path
+        dest.strategy = PathStrategy::EXPLICIT;
+        dest.explicitPath = spec;
+    }
+
+    // SAME-AS-SELF is equivalent to REL
+    if ((fileNum == 1 && dest.strategy == PathStrategy::SAME_AS_1) ||
+        (fileNum == 2 && dest.strategy == PathStrategy::SAME_AS_2)) {
+        dest.strategy = PathStrategy::REL;
+    }
+
+    return dest;
+}
+
+// Get the relative path portion (without drive letter/root)
+fs::path getRelativePath(const fs::path& fullPath) {
+    // For Windows: C:\folder\file.bin -> folder\file.bin
+    // For Unix: /home/user/file.bin -> home/user/file.bin
+    fs::path rel = fullPath;
+    if (rel.has_root_name()) {
+        rel = fs::path(rel.string().substr(rel.root_name().string().length()));
+    }
+    if (rel.has_root_directory()) {
+        rel = rel.relative_path();
+    }
+    return rel;
+}
+
+// Get the drive/root portion of a path
+fs::path getDriveRoot(const fs::path& fullPath) {
+    // For Windows: C:\folder\file.bin -> C:\
+    // For Unix: /home/user/file.bin -> /
+    fs::path root;
+    if (fullPath.has_root_name()) {
+        root = fullPath.root_name();
+    }
+    if (fullPath.has_root_directory()) {
+        root /= fullPath.root_directory();
+    }
+    return root;
+}
+
+// Resolve final destination path based on strategy
+fs::path resolveDestination(const fs::path& sourceFile,
+                            const fs::path& otherFile,
+                            const DestinationSpec& destSpec,
+                            int /*fileNum*/) {
+    fs::path targetDrive = getDriveRoot(otherFile);
+
+    switch (destSpec.strategy) {
+        case PathStrategy::SAME:
+            // Keep original path
+            return sourceFile;
+
+        case PathStrategy::REL: {
+            // Preserve relative path on target drive
+            fs::path relPath = getRelativePath(sourceFile);
+            return targetDrive / relPath;
+        }
+
+        case PathStrategy::SAME_AS_1: {
+            // Use file 1's folder structure (caller ensures this isn't self-referential)
+            fs::path otherRel = getRelativePath(otherFile);
+            fs::path otherDir = otherRel.parent_path();
+            return targetDrive / otherDir / sourceFile.filename();
+        }
+
+        case PathStrategy::SAME_AS_2: {
+            // Use file 2's folder structure
+            fs::path otherRel = getRelativePath(otherFile);
+            fs::path otherDir = otherRel.parent_path();
+            return targetDrive / otherDir / sourceFile.filename();
+        }
+
+        case PathStrategy::EXPLICIT: {
+            // User-specified path
+            std::string pathStr = destSpec.explicitPath;
+
+            // Handle root specifier "/" or "\" - means root of target drive
+            if (pathStr == "/" || pathStr == "\\") {
+                return targetDrive / sourceFile.filename();
+            }
+
+#ifdef _WIN32
+            // Normalize forward slashes to backslashes on Windows
+            std::replace(pathStr.begin(), pathStr.end(), '/', '\\');
+#endif
+
+            fs::path explicitPath(pathStr);
+
+            // Check if it's a path starting with / or \ (relative to drive root)
+            if (!pathStr.empty() && (pathStr[0] == '\\' || pathStr[0] == '/')) {
+                // Path like "/staging" means targetDrive + staging
+                return targetDrive / explicitPath.relative_path() / sourceFile.filename();
+            }
+
+            if (explicitPath.is_absolute() && explicitPath.has_root_name()) {
+                // Fully absolute path with drive letter (e.g., D:\temp)
+                // Use as-is but append filename if it's a directory
+                if (explicitPath.extension().empty() && !explicitPath.filename_is_dot()) {
+                    return explicitPath / sourceFile.filename();
+                }
+                return explicitPath;
+            } else {
+                // Relative path - relative to target drive
+                return targetDrive / explicitPath / sourceFile.filename();
+            }
+        }
+    }
+
+    // Default fallback
+    return sourceFile;
+}
+
+// Prompt user for yes/no confirmation
+bool promptYesNo(const std::string& message, bool defaultYes = false) {
+    std::string prompt = message + (defaultYes ? " [Y/n]: " : " [y/N]: ");
+    std::cout << prompt;
+    std::cout.flush();
+
+    std::string response;
+    std::getline(std::cin, response);
+    boost::algorithm::trim(response);
+
+    if (response.empty()) {
+        return defaultYes;
+    }
+
+    char first = static_cast<char>(std::tolower(static_cast<unsigned char>(response[0])));
+    return (first == 'y');
+}
+
+// Check if paths are on the same filesystem (same drive on Windows)
+bool isSameFilesystem(const fs::path& path1, const fs::path& path2) {
+    fs::path root1 = getDriveRoot(fs::absolute(path1));
+    fs::path root2 = getDriveRoot(fs::absolute(path2));
+    return root1 == root2;
+}
 
 // Function to calculate SHA-256 hash of a file
 std::string calculateSHA256(const std::string& filename) {
@@ -238,6 +451,20 @@ int main(int argc, char* argv[]) {
         .default_value(false)
         .implicit_value(true);
 
+    // Path preservation options (v0.4.0)
+    program.add_argument("--1-to")
+        .help("Destination for file 1 (REL, SAME-AS-1, SAME-AS-2, or /path)")
+        .default_value(std::string(""));
+
+    program.add_argument("--2-to")
+        .help("Destination for file 2 (REL, SAME-AS-1, SAME-AS-2, or /path)")
+        .default_value(std::string(""));
+
+    program.add_argument("-y", "--yes")
+        .help("Auto-confirm actions (mkdir, overwrite, all)")
+        .default_value(std::vector<std::string>{})
+        .append();
+
     try {
         program.parse_args(argc, argv);
     }
@@ -257,33 +484,124 @@ int main(int argc, char* argv[]) {
     bool progress = program.get<bool>("--progress");
     bool dryRun = program.get<bool>("--dry-run");
 
+    // Path preservation options (v0.4.0)
+    std::string dest1Str = program.get<std::string>("--1-to");
+    std::string dest2Str = program.get<std::string>("--2-to");
+    auto yesArgs = program.get<std::vector<std::string>>("--yes");
+    YesActions yesActions = parseYesActions(yesArgs);
+
+    // Determine if we're in path mode (any path flag specified)
+    bool pathModeActive = !dest1Str.empty() || !dest2Str.empty();
+
+    // Parse destination specs - default to REL if path mode active, SAME otherwise
+    DestinationSpec dest1, dest2;
+    if (dest1Str.empty()) {
+        dest1.strategy = pathModeActive ? PathStrategy::REL : PathStrategy::SAME;
+    } else {
+        dest1 = parseDestination(dest1Str, 1);
+    }
+    if (dest2Str.empty()) {
+        dest2.strategy = pathModeActive ? PathStrategy::REL : PathStrategy::SAME;
+    } else {
+        dest2 = parseDestination(dest2Str, 2);
+    }
+
+    fs::path pathA = fs::absolute(fs::path(fileA));
+    fs::path pathB = fs::absolute(fs::path(fileB));
+
+    // Check if source files exist
+    bool existsA = fs::exists(pathA);
+    bool existsB = fs::exists(pathB);
+
+    if (!existsA || !existsB) {
+        std::cerr << "Error: One or both files do not exist." << std::endl;
+        if (!existsA) std::cerr << "  Missing: " << fileA << std::endl;
+        if (!existsB) std::cerr << "  Missing: " << fileB << std::endl;
+        return 1;
+    }
+
+    // Resolve destination paths
+    // Note: For SAME-AS-1/SAME-AS-2, we need to pass the correct "other" file
+    fs::path destA, destB;
+
+    // For file 1: if using SAME-AS-2, the "other" file is file 2
+    if (dest1.strategy == PathStrategy::SAME_AS_2) {
+        destA = resolveDestination(pathA, pathB, dest1, 1);
+    } else {
+        destA = resolveDestination(pathA, pathB, dest1, 1);
+    }
+
+    // For file 2: if using SAME-AS-1, the "other" file is file 1
+    if (dest2.strategy == PathStrategy::SAME_AS_1) {
+        destB = resolveDestination(pathB, pathA, dest2, 2);
+    } else {
+        destB = resolveDestination(pathB, pathA, dest2, 2);
+    }
+
+    auto sizeA = fs::file_size(pathA);
+    auto sizeB = fs::file_size(pathB);
+
+    // Determine operation strategy
+    bool sameDrive = isSameFilesystem(destA, destB);
+    bool pathsChanging = (destA != pathA) || (destB != pathB);
+    std::string strategyName;
+
+    if (sameDrive && !pathsChanging) {
+        strategyName = "Rename swap (atomic, same drive)";
+    } else if (sameDrive) {
+        strategyName = "Rename with path change (same drive)";
+    } else {
+        strategyName = "XOR swap (cross-drive)";
+    }
+
     // Dry run mode - show what would happen without making changes
     if (dryRun) {
         std::cout << "Dry run - no changes will be made\n" << std::endl;
 
-        fs::path pathA(fileA);
-        fs::path pathB(fileB);
-
-        // Check if files exist
-        bool existsA = fs::exists(pathA);
-        bool existsB = fs::exists(pathB);
-
-        if (!existsA || !existsB) {
-            std::cerr << "Error: One or both files do not exist." << std::endl;
-            if (!existsA) std::cerr << "  Missing: " << fileA << std::endl;
-            if (!existsB) std::cerr << "  Missing: " << fileB << std::endl;
-            return 1;
-        }
-
-        auto sizeA = fs::file_size(pathA);
-        auto sizeB = fs::file_size(pathB);
-
-        std::cout << "Would swap:" << std::endl;
-        std::cout << "  File A: " << fs::absolute(pathA).string() << " (" << sizeA << " bytes)" << std::endl;
-        std::cout << "  File B: " << fs::absolute(pathB).string() << " (" << sizeB << " bytes)" << std::endl;
+        std::cout << "Source files:" << std::endl;
+        std::cout << "  File 1: " << pathA.string() << " (" << sizeA << " bytes)" << std::endl;
+        std::cout << "  File 2: " << pathB.string() << " (" << sizeB << " bytes)" << std::endl;
         std::cout << std::endl;
 
-        std::cout << "Strategy: XOR swap (both files modified in place)" << std::endl;
+        std::cout << "Destinations:" << std::endl;
+        std::cout << "  File 1 -> " << destA.string();
+        if (destA == pathA) {
+            std::cout << " (unchanged)";
+        }
+        std::cout << std::endl;
+        std::cout << "  File 2 -> " << destB.string();
+        if (destB == pathB) {
+            std::cout << " (unchanged)";
+        }
+        std::cout << std::endl;
+        std::cout << std::endl;
+
+        // Check for potential issues
+        fs::path destDirA = destA.parent_path();
+        fs::path destDirB = destB.parent_path();
+        bool needsMkdirA = !fs::exists(destDirA);
+        bool needsMkdirB = !fs::exists(destDirB);
+        bool destExistsA = fs::exists(destA) && destA != pathA && destA != pathB;
+        bool destExistsB = fs::exists(destB) && destB != pathA && destB != pathB;
+
+        if (needsMkdirA || needsMkdirB || destExistsA || destExistsB) {
+            std::cout << "Actions required:" << std::endl;
+            if (needsMkdirA) {
+                std::cout << "  - Create directory: " << destDirA.string() << " (--yes mkdir)" << std::endl;
+            }
+            if (needsMkdirB) {
+                std::cout << "  - Create directory: " << destDirB.string() << " (--yes mkdir)" << std::endl;
+            }
+            if (destExistsA) {
+                std::cout << "  - Overwrite existing: " << destA.string() << " (--yes overwrite)" << std::endl;
+            }
+            if (destExistsB) {
+                std::cout << "  - Overwrite existing: " << destB.string() << " (--yes overwrite)" << std::endl;
+            }
+            std::cout << std::endl;
+        }
+
+        std::cout << "Strategy: " << strategyName << std::endl;
         std::cout << "Chunk size: " << (secure ? "1 MB (secure)" : "4 KB (fast)") << std::endl;
         std::cout << "Verification: " << (verify ? "Enabled" : "Disabled") << std::endl;
         std::cout << std::endl;
@@ -292,7 +610,114 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    xorSwap(fileA, fileB, secure, fast, verify, verbose, logFile, progress);
+    // Check and handle directory creation
+    fs::path destDirA = destA.parent_path();
+    fs::path destDirB = destB.parent_path();
+
+    if (!fs::exists(destDirA)) {
+        bool shouldCreate = yesActions.shouldAutoMkdir();
+        if (!shouldCreate) {
+            shouldCreate = promptYesNo("Directory " + destDirA.string() + " does not exist. Create it?");
+        }
+        if (shouldCreate) {
+            fs::create_directories(destDirA);
+            if (verbose) {
+                std::cout << "Created directory: " << destDirA.string() << std::endl;
+            }
+        } else {
+            std::cerr << "Error: Directory does not exist: " << destDirA.string() << std::endl;
+            return 1;
+        }
+    }
+
+    if (!fs::exists(destDirB)) {
+        bool shouldCreate = yesActions.shouldAutoMkdir();
+        if (!shouldCreate) {
+            shouldCreate = promptYesNo("Directory " + destDirB.string() + " does not exist. Create it?");
+        }
+        if (shouldCreate) {
+            fs::create_directories(destDirB);
+            if (verbose) {
+                std::cout << "Created directory: " << destDirB.string() << std::endl;
+            }
+        } else {
+            std::cerr << "Error: Directory does not exist: " << destDirB.string() << std::endl;
+            return 1;
+        }
+    }
+
+    // Check for destination file conflicts (files that exist and aren't the source files)
+    bool destExistsA = fs::exists(destA) && destA != pathA && destA != pathB;
+    bool destExistsB = fs::exists(destB) && destB != pathA && destB != pathB;
+
+    if (destExistsA) {
+        bool shouldOverwrite = yesActions.shouldAutoOverwrite();
+        if (!shouldOverwrite) {
+            shouldOverwrite = promptYesNo("File " + destA.string() + " already exists. Overwrite?");
+        }
+        if (!shouldOverwrite) {
+            std::cerr << "Error: Destination file exists: " << destA.string() << std::endl;
+            return 1;
+        }
+    }
+
+    if (destExistsB) {
+        bool shouldOverwrite = yesActions.shouldAutoOverwrite();
+        if (!shouldOverwrite) {
+            shouldOverwrite = promptYesNo("File " + destB.string() + " already exists. Overwrite?");
+        }
+        if (!shouldOverwrite) {
+            std::cerr << "Error: Destination file exists: " << destB.string() << std::endl;
+            return 1;
+        }
+    }
+
+    // Perform the operation
+    if (verbose) {
+        std::cout << "Strategy: " << strategyName << std::endl;
+    }
+
+    if (sameDrive && pathsChanging) {
+        // Same drive with path changes - use rename-based approach
+        // This is more efficient than XOR for same-filesystem operations
+        fs::path tempA = pathA.string() + ".xmv_temp";
+        fs::path tempB = pathB.string() + ".xmv_temp";
+
+        // Move to temps first, then to final destinations
+        fs::rename(pathA, tempA);
+        fs::rename(pathB, tempB);
+        fs::rename(tempA, destB);  // A's content goes to destB (swap)
+        fs::rename(tempB, destA);  // B's content goes to destA (swap)
+
+        if (verbose) {
+            std::cout << "Swap completed:" << std::endl;
+            std::cout << "  " << pathA.filename().string() << " -> " << destB.string() << std::endl;
+            std::cout << "  " << pathB.filename().string() << " -> " << destA.string() << std::endl;
+        }
+    } else if (!pathsChanging) {
+        // No path changes - use original XOR swap
+        xorSwap(pathA.string(), pathB.string(), secure, fast, verify, verbose, logFile, progress);
+    } else {
+        // Cross-drive with path changes - use XOR swap then rename
+        // First do XOR swap in place
+        xorSwap(pathA.string(), pathB.string(), secure, fast, verify, verbose, logFile, progress);
+
+        // Then move to final destinations if different
+        if (destA != pathA) {
+            if (destExistsA) fs::remove(destA);
+            fs::rename(pathA, destA);
+        }
+        if (destB != pathB) {
+            if (destExistsB) fs::remove(destB);
+            fs::rename(pathB, destB);
+        }
+
+        if (verbose) {
+            std::cout << "Files moved to destinations:" << std::endl;
+            std::cout << "  " << destA.string() << std::endl;
+            std::cout << "  " << destB.string() << std::endl;
+        }
+    }
 
     return 0;
 }

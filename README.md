@@ -97,6 +97,39 @@ xmv fileA fileB --verbose --log swap.log
 xmv fileA fileB --secure --verify
 ```
 
+### Path Preservation
+
+When swapping files between different directories, you can control where each file ends up:
+
+```bash
+# Swap and move file1 to a specific folder
+xmv C:\backup\large.bin D:\archive\small.iso --1-to D:\staging --yes mkdir
+
+# Preserve relative paths (mirror structure on target drive)
+xmv C:\backup\data.bin D:\archive\data.iso --1-to REL --2-to REL
+
+# Use the other file's folder structure
+xmv C:\backup\fileA.txt D:\isos\fileB.txt --1-to SAME-AS-2 --2-to SAME-AS-1
+```
+
+#### Path Keywords
+
+| Keyword | Description |
+|---------|-------------|
+| `REL` | Preserve relative path on target drive |
+| `SAME-AS-1` | Use file 1's folder structure |
+| `SAME-AS-2` | Use file 2's folder structure |
+| `/path` | Explicit destination path |
+
+#### Auto-confirmation
+
+| Flag | Description |
+|------|-------------|
+| `--yes` | Auto-confirm safe actions (mkdir) |
+| `--yes mkdir` | Auto-create directories |
+| `--yes overwrite` | Auto-overwrite existing files |
+| `--yes all` | Auto-confirm all prompts |
+
 ### Options
 
 | Option | Description |
@@ -108,6 +141,9 @@ xmv fileA fileB --secure --verify
 | `--verbose`, `-vb` | Detailed output |
 | `--log FILE` | Write to log file |
 | `--progress` | Display progress bar |
+| `--1-to DEST` | Destination for file 1 (see Path Preservation) |
+| `--2-to DEST` | Destination for file 2 (see Path Preservation) |
+| `--yes [ACTION]` | Auto-confirm prompts (mkdir, overwrite, all) |
 
 ## How It Works
 
