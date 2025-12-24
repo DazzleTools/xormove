@@ -83,6 +83,23 @@ endif()
 # Register test with CTest
 add_test(NAME XorSwapTests COMMAND test_xor_swap)
 
+# Test executable for path preservation features
+add_executable(test_path_preservation
+    tests/test_path_preservation.cpp
+)
+
+target_link_libraries(test_path_preservation PRIVATE
+    Boost::filesystem
+)
+
+if(MSVC)
+    target_compile_options(test_path_preservation PRIVATE /W4)
+else()
+    target_compile_options(test_path_preservation PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_test(NAME PathPreservationTests COMMAND test_path_preservation)
+
 # =============================================================================
 # Install
 # =============================================================================

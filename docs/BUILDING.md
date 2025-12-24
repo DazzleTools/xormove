@@ -247,8 +247,19 @@ cd build
 ctest -C Release --output-on-failure
 ```
 
-Or run the test executable directly:
+Or run the test executables directly:
 
 ```bash
-./build/Release/test_xor_swap  # Windows: .\build\Release\test_xor_swap.exe
+# XOR swap algorithm tests
+./build/Release/test_xor_swap        # Windows: .\build\Release\test_xor_swap.exe
+
+# Path preservation tests
+./build/Release/test_path_preservation  # Windows: .\build\Release\test_path_preservation.exe
 ```
+
+### Test Coverage
+
+| Test Suite | Description |
+|------------|-------------|
+| `test_xor_swap` | Core XOR swap algorithm verification |
+| `test_path_preservation` | Path keyword parsing and destination resolution |

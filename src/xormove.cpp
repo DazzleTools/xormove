@@ -451,7 +451,7 @@ int main(int argc, char* argv[]) {
         .default_value(false)
         .implicit_value(true);
 
-    // Path preservation options (v0.4.0)
+    // Path preservation options
     program.add_argument("--1-to")
         .help("Destination for file 1 (REL, SAME-AS-1, SAME-AS-2, or /path)")
         .default_value(std::string(""));
@@ -484,30 +484,35 @@ int main(int argc, char* argv[]) {
     bool progress = program.get<bool>("--progress");
     bool dryRun = program.get<bool>("--dry-run");
 
-    // Path preservation options (v0.4.0)
+    // Path preservation options
     std::string dest1Str = program.get<std::string>("--1-to");
     std::string dest2Str = program.get<std::string>("--2-to");
     auto yesArgs = program.get<std::vector<std::string>>("--yes");
     YesActions yesActions = parseYesActions(yesArgs);
 
-    // Determine if we're in path mode (any path flag specified)
-    bool pathModeActive = !dest1Str.empty() || !dest2Str.empty();
+    fs::path pathA = fs::absolute(fs::path(fileA));
+    fs::path pathB = fs::absolute(fs::path(fileB));
 
-    // Parse destination specs - default to REL if path mode active, SAME otherwise
+    // Check if source files are on different drives
+    bool crossDrive = !isSameFilesystem(pathA, pathB);
+
+    // Determine default strategy:
+    // - Cross-drive: default to REL (move files to other drive with same relative path)
+    // - Same-drive: default to SAME (swap contents in place)
+    PathStrategy defaultStrategy = crossDrive ? PathStrategy::REL : PathStrategy::SAME;
+
+    // Parse destination specs
     DestinationSpec dest1, dest2;
     if (dest1Str.empty()) {
-        dest1.strategy = pathModeActive ? PathStrategy::REL : PathStrategy::SAME;
+        dest1.strategy = defaultStrategy;
     } else {
         dest1 = parseDestination(dest1Str, 1);
     }
     if (dest2Str.empty()) {
-        dest2.strategy = pathModeActive ? PathStrategy::REL : PathStrategy::SAME;
+        dest2.strategy = defaultStrategy;
     } else {
         dest2 = parseDestination(dest2Str, 2);
     }
-
-    fs::path pathA = fs::absolute(fs::path(fileA));
-    fs::path pathB = fs::absolute(fs::path(fileB));
 
     // Check if source files exist
     bool existsA = fs::exists(pathA);
@@ -670,6 +675,13 @@ int main(int argc, char* argv[]) {
             std::cerr << "Error: Destination file exists: " << destB.string() << std::endl;
             return 1;
         }
+    }
+
+    // Always show destinations when paths are changing (not just verbose mode)
+    if (pathsChanging) {
+        std::cout << "Swapping:" << std::endl;
+        std::cout << "  " << pathA.filename().string() << " -> " << destA.string() << std::endl;
+        std::cout << "  " << pathB.filename().string() << " -> " << destB.string() << std::endl;
     }
 
     // Perform the operation

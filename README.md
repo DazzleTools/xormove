@@ -48,32 +48,37 @@ By streaming chunks and XORing them together, xormove swaps the contents **witho
 
 ## Installation
 
-### Prerequisites
+### Download Pre-built Binaries (Recommended)
 
+Download the latest release for your platform from the [Releases page](https://github.com/DazzleTools/xormove/releases):
+
+| Platform | Binary |
+|----------|--------|
+| Windows (x64) | `xmv-windows-x64.exe` |
+| Linux (x64) | `xmv-linux-x64` |
+| macOS (ARM64) | `xmv-macos-arm64` |
+
+Place the binary somewhere in your PATH (e.g., `C:\Windows` on Windows, `/usr/local/bin` on Linux/macOS).
+
+### Build from Source
+
+If you prefer to build from source:
+
+**Prerequisites:**
 - CMake 3.20+
 - vcpkg (bundled with [Visual Studio 2022](https://visualstudio.microsoft.com/vs/community/), or [install separately](https://vcpkg.io/en/getting-started))
 - C++17 compiler (MSVC, GCC, Clang)
 
-### Quick Start
-
-**Windows (Visual Studio):**
-```cmd
-scripts\build-windows.cmd
-```
-
-**Linux/macOS/BSD:**
+**Quick build:**
 ```bash
-chmod +x scripts/build-unix.sh
+# Windows
+scripts\build-windows.cmd
+
+# Linux/macOS
 ./scripts/build-unix.sh
 ```
 
-**Manual CMake:**
-```bash
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-cmake --build build --config Release
-```
-
-For detailed instructions on building with Visual Studio, VS Code, CLion, or command-line tools, see the [Building Guide](docs/BUILDING.md).
+For detailed build instructions, see the [Building Guide](docs/BUILDING.md).
 
 ## Usage
 
@@ -99,14 +104,28 @@ xmv fileA fileB --secure --verify
 
 ### Path Preservation
 
-When swapping files between different directories, you can control where each file ends up:
+xmv intelligently handles file destinations based on whether files are on the same or different drives:
 
+**Cross-drive swaps** (default: `REL`) - Files move to the other drive, preserving their relative path:
 ```bash
-# Swap and move file1 to a specific folder
-xmv C:\backup\large.bin D:\archive\small.iso --1-to D:\staging --yes mkdir
+xmv C:\backup\large.bin D:\archive\small.iso
+# Result:
+#   D:\backup\large.bin   (moved from C:, keeps relative path)
+#   C:\archive\small.iso  (moved from D:, keeps relative path)
+```
 
-# Preserve relative paths (mirror structure on target drive)
-xmv C:\backup\data.bin D:\archive\data.iso --1-to REL --2-to REL
+**Same-drive swaps** (default: `SAME`) - Contents swap in place, files don't move:
+```bash
+xmv C:\backup\fileA.txt C:\archive\fileB.txt
+# Result:
+#   C:\backup\fileA.txt   (now contains fileB's content)
+#   C:\archive\fileB.txt  (now contains fileA's content)
+```
+
+**Custom destinations** - Override defaults with `--1-to` and `--2-to`:
+```bash
+# Move file1 to a specific folder
+xmv C:\backup\large.bin D:\archive\small.iso --1-to D:\staging --yes mkdir
 
 # Use the other file's folder structure
 xmv C:\backup\fileA.txt D:\isos\fileB.txt --1-to SAME-AS-2 --2-to SAME-AS-1
@@ -116,7 +135,8 @@ xmv C:\backup\fileA.txt D:\isos\fileB.txt --1-to SAME-AS-2 --2-to SAME-AS-1
 
 | Keyword | Description |
 |---------|-------------|
-| `REL` | Preserve relative path on target drive |
+| `REL` | Preserve relative path on target drive (default for cross-drive) |
+| `SAME` | Keep file at original location (default for same-drive) |
 | `SAME-AS-1` | Use file 1's folder structure |
 | `SAME-AS-2` | Use file 2's folder structure |
 | `/path` | Explicit destination path |
