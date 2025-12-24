@@ -27,7 +27,7 @@ During installation, select:
 4. Select build configuration (Debug/Release) from the toolbar
 5. Build with **Build > Build All** or press `Ctrl+Shift+B`
 
-The executable will be at `build/Release/xormove.exe` or `build/Debug/xormove.exe`.
+The executable will be at `build/Release/xmv.exe` or `build/Debug/xmv.exe`.
 
 ### Option 2: Visual Studio Code
 

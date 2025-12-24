@@ -48,7 +48,7 @@ echo "Test content for file B" > test-runs/fileB.txt
 Run the executable:
 
 ```bash
-bin\Debug\xormove.exe test-runs\fileA.txt test-runs\fileB.txt --verbose --progress
+bin\Debug\xmv.exe test-runs\fileA.txt test-runs\fileB.txt --verbose --progress
 ```
 
 ## Code Style

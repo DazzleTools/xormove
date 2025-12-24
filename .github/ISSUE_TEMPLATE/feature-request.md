@@ -21,7 +21,7 @@ A clear and concise description of what you want to happen.
 **Proposed CLI interface (if applicable)**
 How would you invoke this feature from the command line?
 ```bash
-xormove [proposed options here]
+xmv [proposed options here]
 ```
 
 **Describe alternatives you've considered**
