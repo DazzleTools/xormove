@@ -275,6 +275,13 @@ bool isSameFilesystem(const fs::path& path1, const fs::path& path2) {
     return root1 == root2;
 }
 
+// Check if two files are in the same folder
+bool isSameFolder(const fs::path& path1, const fs::path& path2) {
+    fs::path abs1 = fs::absolute(path1);
+    fs::path abs2 = fs::absolute(path2);
+    return abs1.parent_path() == abs2.parent_path();
+}
+
 // Function to calculate SHA-256 hash of a file
 std::string calculateSHA256(const std::string& filename) {
     CryptoPP::SHA256 hash;
@@ -495,23 +502,23 @@ int main(int argc, char* argv[]) {
 
     // Check if source files are on different drives
     bool crossDrive = !isSameFilesystem(pathA, pathB);
+    bool sameFolder = !crossDrive && isSameFolder(pathA, pathB);
 
-    // Determine default strategy:
-    // - Cross-drive: default to REL (move files to other drive with same relative path)
-    // - Same-drive: default to SAME (swap contents in place)
-    PathStrategy defaultStrategy = crossDrive ? PathStrategy::REL : PathStrategy::SAME;
-
-    // Parse destination specs
+    // Parse destination specs (user overrides)
     DestinationSpec dest1, dest2;
-    if (dest1Str.empty()) {
-        dest1.strategy = defaultStrategy;
-    } else {
+    bool userSpecifiedDest1 = !dest1Str.empty();
+    bool userSpecifiedDest2 = !dest2Str.empty();
+
+    if (userSpecifiedDest1) {
         dest1 = parseDestination(dest1Str, 1);
-    }
-    if (dest2Str.empty()) {
-        dest2.strategy = defaultStrategy;
     } else {
+        // Default strategy depends on drive configuration
+        dest1.strategy = crossDrive ? PathStrategy::REL : PathStrategy::SAME;
+    }
+    if (userSpecifiedDest2) {
         dest2 = parseDestination(dest2Str, 2);
+    } else {
+        dest2.strategy = crossDrive ? PathStrategy::REL : PathStrategy::SAME;
     }
 
     // Check if source files exist
@@ -526,20 +533,25 @@ int main(int argc, char* argv[]) {
     }
 
     // Resolve destination paths
-    // Note: For SAME-AS-1/SAME-AS-2, we need to pass the correct "other" file
     fs::path destA, destB;
 
-    // For file 1: if using SAME-AS-2, the "other" file is file 2
-    if (dest1.strategy == PathStrategy::SAME_AS_2) {
-        destA = resolveDestination(pathA, pathB, dest1, 1);
+    // For same-drive operations without explicit user override, swap locations:
+    // - Same folder: swap names (A→B's name, B→A's name) via atomic rename
+    // - Different folder: swap folders (A→B's folder, B→A's folder)
+    if (!crossDrive && !userSpecifiedDest1 && !userSpecifiedDest2) {
+        if (sameFolder) {
+            // Same folder: three-way rename will swap the names
+            // destA and destB are set to swap positions
+            destA = pathB;  // A will end up where B was (with B's name)
+            destB = pathA;  // B will end up where A was (with A's name)
+        } else {
+            // Different folders: each file moves to the other's folder
+            destA = pathB.parent_path() / pathA.filename();
+            destB = pathA.parent_path() / pathB.filename();
+        }
     } else {
+        // User specified destinations or cross-drive: use standard resolution
         destA = resolveDestination(pathA, pathB, dest1, 1);
-    }
-
-    // For file 2: if using SAME-AS-1, the "other" file is file 1
-    if (dest2.strategy == PathStrategy::SAME_AS_1) {
-        destB = resolveDestination(pathB, pathA, dest2, 2);
-    } else {
         destB = resolveDestination(pathB, pathA, dest2, 2);
     }
 
@@ -547,16 +559,15 @@ int main(int argc, char* argv[]) {
     auto sizeB = fs::file_size(pathB);
 
     // Determine operation strategy
-    bool sameDrive = isSameFilesystem(destA, destB);
     bool pathsChanging = (destA != pathA) || (destB != pathB);
     std::string strategyName;
 
-    if (sameDrive && !pathsChanging) {
-        strategyName = "Rename swap (atomic, same drive)";
-    } else if (sameDrive) {
-        strategyName = "Rename with path change (same drive)";
+    if (!crossDrive && sameFolder) {
+        strategyName = "Name swap (atomic three-way rename)";
+    } else if (!crossDrive) {
+        strategyName = "Folder swap (atomic renames)";
     } else {
-        strategyName = "XOR swap (cross-drive)";
+        strategyName = "XOR swap (cross-drive, space-efficient)";
     }
 
     // Dry run mode - show what would happen without making changes
@@ -607,8 +618,13 @@ int main(int argc, char* argv[]) {
         }
 
         std::cout << "Strategy: " << strategyName << std::endl;
-        std::cout << "Chunk size: " << (secure ? "1 MB (secure)" : "4 KB (fast)") << std::endl;
-        std::cout << "Verification: " << (verify ? "Enabled" : "Disabled") << std::endl;
+        if (crossDrive) {
+            // XOR swap options only relevant for cross-drive
+            std::cout << "Chunk size: " << (secure ? "1 MB (secure)" : "4 KB (fast)") << std::endl;
+            std::cout << "Verification: " << (verify ? "Enabled" : "Disabled") << std::endl;
+        } else {
+            std::cout << "Performance: O(1) - instant filesystem operation" << std::endl;
+        }
         std::cout << std::endl;
         std::cout << "No changes made." << std::endl;
 
@@ -677,44 +693,46 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Always show destinations when paths are changing (not just verbose mode)
-    if (pathsChanging) {
+    // Show swap details
+    if (verbose || pathsChanging) {
         std::cout << "Swapping:" << std::endl;
         std::cout << "  " << pathA.filename().string() << " -> " << destA.string() << std::endl;
         std::cout << "  " << pathB.filename().string() << " -> " << destB.string() << std::endl;
-    }
-
-    // Perform the operation
-    if (verbose) {
         std::cout << "Strategy: " << strategyName << std::endl;
     }
 
-    if (sameDrive && pathsChanging) {
-        // Same drive with path changes - use rename-based approach
-        // This is more efficient than XOR for same-filesystem operations
-        fs::path tempA = pathA.string() + ".xmv_temp";
-        fs::path tempB = pathB.string() + ".xmv_temp";
+    // Perform the operation based on drive/folder configuration
+    if (!crossDrive && sameFolder) {
+        // Same folder, same drive: three-way atomic rename (swap names)
+        // A→temp, B→A, temp→B
+        fs::path tempPath = pathA.parent_path() / (pathA.filename().string() + ".xmv_swap");
+
+        fs::rename(pathA, tempPath);   // A → temp
+        fs::rename(pathB, pathA);      // B → A (B now has A's name)
+        fs::rename(tempPath, pathB);   // temp → B (A's content now has B's name)
+
+        if (verbose) {
+            std::cout << "Name swap completed (O(1) atomic renames)" << std::endl;
+        }
+    } else if (!crossDrive) {
+        // Different folders, same drive: four-way atomic rename (swap folders)
+        fs::path tempA = pathA.parent_path() / (pathA.filename().string() + ".xmv_temp");
+        fs::path tempB = pathB.parent_path() / (pathB.filename().string() + ".xmv_temp");
 
         // Move to temps first, then to final destinations
         fs::rename(pathA, tempA);
         fs::rename(pathB, tempB);
-        fs::rename(tempA, destB);  // A's content goes to destB (swap)
-        fs::rename(tempB, destA);  // B's content goes to destA (swap)
+        fs::rename(tempA, destA);  // A moves to B's folder
+        fs::rename(tempB, destB);  // B moves to A's folder
 
         if (verbose) {
-            std::cout << "Swap completed:" << std::endl;
-            std::cout << "  " << pathA.filename().string() << " -> " << destB.string() << std::endl;
-            std::cout << "  " << pathB.filename().string() << " -> " << destA.string() << std::endl;
+            std::cout << "Folder swap completed (O(1) atomic renames)" << std::endl;
         }
-    } else if (!pathsChanging) {
-        // No path changes - use original XOR swap
-        xorSwap(pathA.string(), pathB.string(), secure, fast, verify, verbose, logFile, progress);
     } else {
-        // Cross-drive with path changes - use XOR swap then rename
-        // First do XOR swap in place
+        // Cross-drive: XOR swap (space-efficient, required for different filesystems)
         xorSwap(pathA.string(), pathB.string(), secure, fast, verify, verbose, logFile, progress);
 
-        // Then move to final destinations if different
+        // Move to final destinations if different from source
         if (destA != pathA) {
             if (destExistsA) fs::remove(destA);
             fs::rename(pathA, destA);
@@ -725,9 +743,10 @@ int main(int argc, char* argv[]) {
         }
 
         if (verbose) {
-            std::cout << "Files moved to destinations:" << std::endl;
-            std::cout << "  " << destA.string() << std::endl;
-            std::cout << "  " << destB.string() << std::endl;
+            std::cout << "XOR swap completed" << std::endl;
+            if (destA != pathA || destB != pathB) {
+                std::cout << "Files moved to final destinations" << std::endl;
+            }
         }
     }
 

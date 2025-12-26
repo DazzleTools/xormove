@@ -5,6 +5,18 @@ All notable changes to xormove will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-12-25
+
+### Changed
+- **Same-drive swaps now use atomic renames** - O(1) performance improvement
+  - Same folder: three-way rename swaps filenames instantly
+  - Different folders: files swap to each other's directory
+  - Cross-drive: XOR swap unchanged (required for space efficiency)
+- Same-drive default behavior changed from content-swap to location-swap (closes #15)
+
+### Added
+- `isSameFolder()` helper function for path detection
+
 ## [0.3.1] - 2025-12-24
 
 ### Changed
@@ -95,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secure mode with larger chunk size (`--secure` flag)
 - CMake build system with vcpkg dependency management
 
+[0.3.2]: https://github.com/DazzleTools/xormove/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/DazzleTools/xormove/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/DazzleTools/xormove/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/DazzleTools/xormove/compare/v0.1.4...v0.2.0

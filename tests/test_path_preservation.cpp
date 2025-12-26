@@ -198,11 +198,15 @@ bool testDefaultStrategySameDrive() {
     std::cout << "Test: Default strategy for same-drive... ";
 
     // Simulate same-drive check
-    // On same drive, default should be SAME (contents swap in place)
+    // Note: In v0.3.2+, same-drive operations use atomic renames to swap locations
+    // (folder swap for different folders, name swap for same folder).
+    // The SAME strategy is only used when explicitly requested via --1-to SAME.
+    // This test verifies the initial strategy assignment before the override.
     bool sameDrive = true;
-    PathStrategy defaultStrategy = sameDrive ? PathStrategy::SAME : PathStrategy::REL;
+    PathStrategy initialStrategy = sameDrive ? PathStrategy::SAME : PathStrategy::REL;
 
-    bool success = (defaultStrategy == PathStrategy::SAME);
+    // Initial assignment is SAME, but main() overrides this for same-drive operations
+    bool success = (initialStrategy == PathStrategy::SAME);
 
     std::cout << (success ? "PASSED" : "FAILED") << std::endl;
     return success;

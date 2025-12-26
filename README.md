@@ -114,12 +114,19 @@ xmv C:\backup\large.bin D:\archive\small.iso
 #   C:\archive\small.iso  (moved from D:, keeps relative path)
 ```
 
-**Same-drive swaps** (default: `SAME`) - Contents swap in place, files don't move:
+**Same-drive swaps** - Files swap locations via atomic renames (O(1) performance):
 ```bash
+# Different folders: files swap to each other's directory
 xmv C:\backup\fileA.txt C:\archive\fileB.txt
 # Result:
-#   C:\backup\fileA.txt   (now contains fileB's content)
-#   C:\archive\fileB.txt  (now contains fileA's content)
+#   C:\archive\fileA.txt  (A moved to B's folder)
+#   C:\backup\fileB.txt   (B moved to A's folder)
+
+# Same folder: files swap names
+xmv C:\backup\fileA.txt C:\backup\fileB.txt
+# Result:
+#   C:\backup\fileA.txt   (now contains what was in fileB)
+#   C:\backup\fileB.txt   (now contains what was in fileA)
 ```
 
 **Custom destinations** - Override defaults with `--1-to` and `--2-to`:
@@ -136,7 +143,7 @@ xmv C:\backup\fileA.txt D:\isos\fileB.txt --1-to SAME-AS-2 --2-to SAME-AS-1
 | Keyword | Description |
 |---------|-------------|
 | `REL` | Preserve relative path on target drive (default for cross-drive) |
-| `SAME` | Keep file at original location (default for same-drive) |
+| `SAME` | Keep file at original location (swap contents only) |
 | `SAME-AS-1` | Use file 1's folder structure |
 | `SAME-AS-2` | Use file 2's folder structure |
 | `/path` | Explicit destination path |
