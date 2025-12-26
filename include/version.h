@@ -29,7 +29,7 @@
 // Full version string - updated by git pre-commit hook
 // DO NOT EDIT THIS LINE MANUALLY
 // Note: Hash reflects the commit this version builds upon (HEAD at commit time)
-#define XORMOVE_VERSION_FULL "0.3.1_main_17-20251224-4fd0d31"
+#define XORMOVE_VERSION_FULL "0.3.1_main_18-20251225-0e002c9"
 
 // Helper macros
 #define XORMOVE_VERSION_STRING "0.3.1"
